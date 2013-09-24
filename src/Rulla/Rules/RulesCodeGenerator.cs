@@ -5,9 +5,9 @@ namespace ByteCarrot.Rulla.Rules
 {
     public class RulesCodeGenerator : IRulesCodeGenerator
     {
-        public CodeCompileUnit GenerateCode(ParseTree tree)
+        public CodeCompileUnit GenerateCode<TRule, TModel>(ParseTree tree) where TRule : Rule<TModel>
         {
-            var generator = new RuleCodeGenerator();
+            var generator = new RuleCodeGenerator<TRule, TModel>();
             var unit = new CodeCompileUnit();
             var ns = new CodeNamespace(GetType().Namespace);
             ns.Imports.Add(new CodeNamespaceImport(GetType().Namespace));

@@ -54,9 +54,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Rules\FakeActivityContext.cs" />
-    <Compile Include="Rules\RulesCompilerTests.cs" />
-    <Compile Include="Rules\RulesGrammarTests.cs" />
+    <Compile Include="Rules\ModelAnalyzerTests.cs" />
+    <Compile Include="Rules\TestModel.cs" />
+    <Compile Include="Rules\TestRule.cs" />
     <Compile Include="TestFixtureBase.cs" />
   </ItemGroup>
   <ItemGroup>

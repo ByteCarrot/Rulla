@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace ByteCarrot.Rulla.Rules
 {
-    public class CompilationResult
+    public class CompilationResult<TRule, TModel> where TRule : Rule<TModel>
     {
         public CompilationResult(List<CompilationError> errors)
         {
@@ -10,13 +10,13 @@ namespace ByteCarrot.Rulla.Rules
             Errors = errors;
         }
 
-        public CompilationResult(List<IRule> rules)
+        public CompilationResult(List<TRule> rules)
         {
             Success = true;
             Rules = rules;
         }
 
-        public List<IRule> Rules { get; private set; }
+        public List<TRule> Rules { get; private set; }
 
         public List<CompilationError> Errors { get; private set; }
 

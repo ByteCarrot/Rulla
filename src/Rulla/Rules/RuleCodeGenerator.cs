@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 
 namespace ByteCarrot.Rulla.Rules
 {
-    public class RuleCodeGenerator : CodeDomBuilder
+    public class RuleCodeGenerator<TRule, TModel> : CodeDomBuilder where TRule : Rule<TModel>
     {
         public CodeTypeDeclaration GenerateRuleClass(string name, ParseTreeNode node)
         {
@@ -15,7 +15,7 @@ namespace ByteCarrot.Rulla.Rules
                                IsClass = true, 
                                Attributes = MemberAttributes.Public
                            };
-            type.BaseTypes.Add(typeof (Rule));
+            type.BaseTypes.Add(typeof (TRule));
             type.Members.Add(Constructor(node.ChildNodes[1].ChildNodes[1].ChildNodes[0], node.Stringify()));
             type.Members.Add(ApplyMethod(node.ChildNodes[0].ChildNodes[1]));
             return type;
@@ -25,7 +25,7 @@ namespace ByteCarrot.Rulla.Rules
         {
             var constructor = new CodeConstructor {Attributes = MemberAttributes.Public};
             constructor.Statements.Add(AssignValueTo(x => x.Text, text));
-            if (node.Term.Name == "IgnoreActivity")
+            /*if (node.Term.Name == "IgnoreActivity")
             {
                 constructor.Statements.Add(AssignValueTo(x => x.IgnoreActivity, true));
                 return constructor;
@@ -69,19 +69,19 @@ namespace ByteCarrot.Rulla.Rules
                 }
 
                 throw new NotSupportedException(child.Term.Name);
-            }
+            }*/
 
             return constructor;
         }
 
-        private CodeAssignStatement AssignValueTo(Expression<Func<IRule, bool?>> func, bool value)
+        private CodeAssignStatement AssignValueTo(Expression<Func<Rule<TModel>, bool?>> func, bool value)
         {
             var property = new CodeFieldReferenceExpression(new CodeThisReferenceExpression(), func.GetName());
             var assignment = new CodeAssignStatement(property, _(value));
             return assignment;
         }
 
-        private CodeAssignStatement AssignValueTo(Expression<Func<IRule, string>> func, string value)
+        private CodeAssignStatement AssignValueTo(Expression<Func<Rule<TModel>, string>> func, string value)
         {
             var property = new CodeFieldReferenceExpression(new CodeThisReferenceExpression(), func.GetName());
             var assignment = new CodeAssignStatement(property, _(value));
@@ -90,7 +90,7 @@ namespace ByteCarrot.Rulla.Rules
 
         private CodeMemberMethod ApplyMethod(ParseTreeNode node)
         {
-            var parameterType = new CodeTypeReference(typeof (IActivityContext));
+            var parameterType = new CodeTypeReference(typeof (TModel));
             var returnType = new CodeTypeReference(typeof (bool));
             var contextParameter = new CodeParameterDeclarationExpression(parameterType, "context");
 
@@ -116,20 +116,20 @@ namespace ByteCarrot.Rulla.Rules
                     return LogicalOperation(node.ChildNodes[1]);
                 case "LogicalOperation":
                     return LogicalOperation(node);
-                case "UrlCondition":
-                    return StringCondition(node, x => x.Url);
-                case "MachineCondition":
-                    return StringCondition(node, x => x.Machine);
-                case "RequestHeaderCondition":
-                    return HeaderCondition(node.ChildNodes[1], x => x.RequestHeaders);
-                case "ResponseHeaderCondition":
-                    return HeaderCondition(node.ChildNodes[1], x => x.ResponseHeaders);
-                case "StatusCodeCondition":
-                    return NumberCondition(node, x => x.StatusCode);
-                case "RequestSizeCondition" :
-                    return NumberCondition(node, x => x.RequestSize);
-                case "ResponseSizeCondition" :
-                    return NumberCondition(node, x => x.ResponseSize);
+                //case "UrlCondition":
+                //    return StringCondition(node, x => x.Url);
+                //case "MachineCondition":
+                //    return StringCondition(node, x => x.Machine);
+                //case "RequestHeaderCondition":
+                //    return HeaderCondition(node.ChildNodes[1], x => x.RequestHeaders);
+                //case "ResponseHeaderCondition":
+                //    return HeaderCondition(node.ChildNodes[1], x => x.ResponseHeaders);
+                //case "StatusCodeCondition":
+                //    return NumberCondition(node, x => x.StatusCode);
+                //case "RequestSizeCondition" :
+                //    return NumberCondition(node, x => x.RequestSize);
+                //case "ResponseSizeCondition" :
+                //    return NumberCondition(node, x => x.ResponseSize);
                 case "StarOperator":
                     return _(true);
             }
@@ -137,7 +137,7 @@ namespace ByteCarrot.Rulla.Rules
             throw new NotSupportedException(node.Term.Name);
         }
 
-        private CodeExpression NumberCondition(ParseTreeNode node, Expression<Func<IActivityContext, int>> expression)
+        private CodeExpression NumberCondition(ParseTreeNode node, Expression<Func<TModel, int>> expression)
         {
             var property = new CodeFieldReferenceExpression(new CodeVariableReferenceExpression("context"), expression.GetName());
             var @operator = node.ChildNodes[2].ChildNodes[0].Token.ValueString;
@@ -145,7 +145,7 @@ namespace ByteCarrot.Rulla.Rules
             return NumberOperation(property, @operator, value);
         }
 
-        private CodeExpression StringCondition(ParseTreeNode node, Expression<Func<IActivityContext, string>> expression)
+        private CodeExpression StringCondition(ParseTreeNode node, Expression<Func<TModel, string>> expression)
         {
             var property = new CodeFieldReferenceExpression(new CodeVariableReferenceExpression("context"),expression.GetName());
 
@@ -154,7 +154,7 @@ namespace ByteCarrot.Rulla.Rules
             return StringOperation(property, @operator, urlValue);
         }
 
-        private CodeExpression HeaderCondition(ParseTreeNode node, Expression<Func<IActivityContext, object>> expression)
+        private CodeExpression HeaderCondition(ParseTreeNode node, Expression<Func<TModel, object>> expression)
         {
             var headerName = node.ChildNodes[1].Token.ValueString;
             var @operator = node.ChildNodes[2].ChildNodes[0].Token.ValueString;

@@ -3,35 +3,38 @@ using Microsoft.CSharp;
 using System;
 using System.CodeDom;
 using System.CodeDom.Compiler;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
 namespace ByteCarrot.Rulla.Rules
 {
-    public class RulesCompiler : IRulesCompiler
+    public class RulesCompiler<TRule, TModel> : IRulesCompiler<TRule, TModel> where TRule : Rule<TModel>
     {
         private readonly IRulesCodeGenerator _generator;
-        private readonly string _currentAssemblyFile;
+        private readonly List<string> _references = new List<string>();
 
         public bool DebugMode { get; set; }
 
         public RulesCompiler(IRulesCodeGenerator generator)
         {
             _generator = generator;
-            _currentAssemblyFile = GetType().Assembly.GetName().Name + ".dll";
+            _references.Add(GetType().Assembly.GetName().Name + ".dll");
+            _references.Add(typeof(TRule).Assembly.GetName().Name + ".dll");
+            _references.Add(typeof(TModel).Assembly.GetName().Name + ".dll");
         }
 
-        public CompilationResult Compile(string rules)
+        public CompilationResult<TRule, TModel> Compile(string rules)
         {
-            var interfaceName = typeof (IRule).Name;
+            var interfaceName = typeof(Rule<TRule>).Name;
             var tree = RulesGrammar.Parse(rules);
             if (tree.Status == ParseTreeStatus.Error)
             {
                 return Errors(tree);
             }
 
-            var unit = _generator.GenerateCode(tree);
+            var unit = _generator.GenerateCode<TRule, TModel>(tree);
 
             if (DebugMode)
             {
@@ -47,20 +50,20 @@ namespace ByteCarrot.Rulla.Rules
             var assembly = result.CompiledAssembly;
             var list = assembly.GetExportedTypes()
                 .Where(x => x.IsClass && x.GetInterfaces().Any(i => i.Name == interfaceName))
-                .Select(x => (IRule) assembly.CreateInstance(x.ToString()))
+                .Select(x => (TRule)assembly.CreateInstance(x.ToString()))
                 .ToList();
-            return new CompilationResult(list);
+            return new CompilationResult<TRule, TModel>(list);
         }
 
-        private static CompilationResult Errors(CompilerResults result)
+        private static CompilationResult<TRule, TModel> Errors(CompilerResults result)
         {
             var errors = result.Errors.Cast<CompilerError>().Select(x => new CompilationError(x)).ToList();
-            return new CompilationResult(errors);
+            return new CompilationResult<TRule, TModel>(errors);
         }
 
-        private static CompilationResult Errors(ParseTree tree)
+        private static CompilationResult<TRule, TModel> Errors(ParseTree tree)
         {
-            return new CompilationResult(tree.ParserMessages.Select(x => new CompilationError(x)).ToList());
+            return new CompilationResult<TRule, TModel>(tree.ParserMessages.Select(x => new CompilationError(x)).ToList());
         }
 
         private CompilerResults Compile(CodeCompileUnit unit)
@@ -74,7 +77,7 @@ namespace ByteCarrot.Rulla.Rules
                 CompilerOptions = String.Format("/lib:\"{0}\"", lib)
             };
             options.ReferencedAssemblies.Add("System.dll");
-            options.ReferencedAssemblies.Add(_currentAssemblyFile);
+            _references.ForEach(x => options.ReferencedAssemblies.Add(x));
 
             return new CSharpCodeProvider().CompileAssemblyFromDom(options, unit);
         }

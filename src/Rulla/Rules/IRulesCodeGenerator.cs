@@ -5,6 +5,6 @@ namespace ByteCarrot.Rulla.Rules
 {
     public interface IRulesCodeGenerator
     {
-        CodeCompileUnit GenerateCode(ParseTree tree);
+        CodeCompileUnit GenerateCode<TRule, TModel>(ParseTree tree) where TRule : Rule<TModel>;
     }
 }

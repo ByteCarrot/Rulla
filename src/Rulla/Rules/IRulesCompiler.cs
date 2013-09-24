@@ -1,8 +1,8 @@
 
 namespace ByteCarrot.Rulla.Rules
 {
-    public interface IRulesCompiler
+    public interface IRulesCompiler<TRule, TModel> where TRule : Rule<TModel>
     {
-        CompilationResult Compile(string rules);
+        CompilationResult<TRule, TModel> Compile(string rules);
     }
 }
